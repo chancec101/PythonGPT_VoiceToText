@@ -24,7 +24,6 @@
 from openai import OpenAI
 # Importing the os library
 import os 
-import time
 # Importing the Azure API
 import azure.cognitiveservices.speech as speechsdk
 
@@ -39,10 +38,10 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 # A function that will generate a response based on what the user inputs
-def chat_gpt(prompt):
+def chat_gpt(messages):
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content" : prompt}]
+        messages=messages   # Send the entire conversation history as messages
     )
 
     return response.choices[0].message.content.strip()
@@ -93,6 +92,12 @@ class SpeechToTextManager:
 # Until the program is stopped, the user can speak as many prompts as they want to
 if __name__ == "__main__":
 
+    # Initialize the conversation history with a system message or an empty list
+    conversation_history = []
+    
+    # Add a memory initialization message to remind the bot about its memory
+    conversation_history.append({"role": "system", "content": "You have memory in this session. You will remember things mentioned until the session ends."})
+
     speech_manager = SpeechToTextManager()
 
     while True:
@@ -102,9 +107,15 @@ if __name__ == "__main__":
         if speech_text:
             print(f"\nUser: {speech_text}")
 
-            # Send the speech that was captured over to ChatGPT as text
-            chat_response = chat_gpt(speech_text)
+            # Add the user's speech input to the conversation history
+            conversation_history.append({"role": "user", "content": speech_text})
+
+            # Send the conversation history to the GPT model
+            chat_response = chat_gpt(conversation_history)
             print(f"Bot: {chat_response}")
+
+            # Add the bot's response to the conversation history
+            conversation_history.append({"role": "assistant", "content": chat_response})
         else:
             print("No valid speech input detected. Please try again.")
 
